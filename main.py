@@ -68,6 +68,8 @@ async def pic(inter: disnake.CommandInteraction, query: str):
         label="Next", style=disnake.ButtonStyle.primary, custom_id="next"))
     view.add_item(disnake.ui.Button(label="Confirm",
                   style=disnake.ButtonStyle.success, custom_id="confirm"))
+    view.add_item(disnake.ui.Button(label="Cancel",
+                  style=disnake.ButtonStyle.secondary, custom_id="cancel"))
 
     # Save session using dataclass
     user_sessions[inter.user.id] = ImageSession(
@@ -100,6 +102,11 @@ async def handle_buttons(inter: disnake.MessageInteraction):
         await inter.response.send_message(embed=embed, ephemeral=False)
         print(
             f"✅ User {inter.user.name!r} ({inter.user.id}) confirmed image {session.query!r}: {url}")
+        return
+    elif cid == "cancel":
+        user_sessions.pop(user_id, None)
+        emb = disnake.Embed(title="✅ Cancelled")
+        await inter.response.send_message(embed=emb, ephemeral=True)
         return
 
     # Edit ephemeral message with new image
