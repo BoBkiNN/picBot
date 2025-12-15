@@ -33,7 +33,7 @@ user_sessions: dict[int, ImageSession] = {}
 async def serpapi_search_images(query: str, num: int = 10) -> list[str]:
     client = Client(api_key=SERPAPI_KEY)
     results = client.search({
-        "engine": "google_images",
+        "engine": "google_images_light",
         "q": query,
         "num": num
     })
