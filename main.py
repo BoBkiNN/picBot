@@ -11,8 +11,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 
 # Initialize Disnake bot
-bot = commands.InteractionBot(
-    command_sync_flags=commands.CommandSyncFlags.all())
+bot = commands.InteractionBot()
 
 # -------- Dataclass for User Session --------
 
@@ -94,7 +93,7 @@ async def handle_buttons(inter: disnake.MessageInteraction):
     elif cid == "next":
         session.idx = (session.idx + 1) % len(session.urls)
     elif cid == "confirm":
-        embed = disnake.Embed(title=f"Image for: {session.query}")
+        embed = disnake.Embed(title=f"Image from {inter.user.display_name}")
         embed.set_image(url=session.urls[session.idx])
         await inter.response.send_message(embed=embed, ephemeral=False)
         return
