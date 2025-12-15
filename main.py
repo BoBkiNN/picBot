@@ -10,7 +10,8 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 
 # Initialize Disnake bot
-bot = commands.InteractionBot(command_sync_flags=commands.CommandSyncFlags.all())
+bot = commands.InteractionBot(
+    command_sync_flags=commands.CommandSyncFlags.all())
 
 # Session store for browsing state
 user_sessions: dict[int, dict] = {}
@@ -54,9 +55,6 @@ async def pic(inter: disnake.CommandInteraction, query: str):
     if not urls:
         return await inter.followup.send("No images found.", ephemeral=True)
 
-    # Save browsing state
-    user_sessions[inter.user.id] = {"urls": urls, "idx": 0, "query": query}
-
     # Make view with buttons
     view = disnake.ui.View()
     view.add_item(disnake.ui.Button(
@@ -65,6 +63,14 @@ async def pic(inter: disnake.CommandInteraction, query: str):
         label="Next", style=disnake.ButtonStyle.primary, custom_id="next"))
     view.add_item(disnake.ui.Button(label="Confirm",
                   style=disnake.ButtonStyle.success, custom_id="confirm"))
+
+    # Save browsing state
+    user_sessions[inter.user.id] = {
+        "urls": urls,
+        "idx": 0,
+        "query": query,
+        "view": view
+    }
 
     embed = build_embed(urls[0], query, 0, len(urls))
     await inter.followup.send(embed=embed, view=view, ephemeral=True)
@@ -82,6 +88,7 @@ async def handle_buttons(inter: disnake.MessageInteraction):
     urls = session["urls"]
     idx = session["idx"]
     query = session["query"]
+    view = session["view"]
 
     cid = inter.component.custom_id
 
@@ -101,11 +108,13 @@ async def handle_buttons(inter: disnake.MessageInteraction):
 
     # Edit ephemeral message with new image
     new_embed = build_embed(urls[idx], query, idx, len(urls))
-    await inter.response.edit_message(embed=new_embed, view=inter.message.components[0].view, ephemeral=True)
+    await inter.response.edit_message(embed=new_embed, view=view)
+
 
 @bot.event
 async def on_ready():
-    print(f"✅ Bot connected: APP ID: {bot.application_id}; Name: {bot.user.name}")
+    print(
+        f"✅ Bot connected: APP ID: {bot.application_id}; Name: {bot.user.name}")
 
 # -------- Run Bot --------
 bot.run(BOT_TOKEN)
