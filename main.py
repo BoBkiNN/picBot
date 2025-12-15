@@ -75,6 +75,7 @@ async def pic(inter: disnake.CommandInteraction, query: str):
 
     embed = build_embed(urls[0], query, 0, len(urls))
     await inter.followup.send(embed=embed, view=view, ephemeral=True)
+    print(f"User {inter.user.name!r} ({inter.user.id}) requested image {query!r}")
 
 # -------- Button Interaction --------
 
@@ -94,8 +95,11 @@ async def handle_buttons(inter: disnake.MessageInteraction):
         session.idx = (session.idx + 1) % len(session.urls)
     elif cid == "confirm":
         embed = disnake.Embed(title=f"Image from {inter.user.display_name}")
-        embed.set_image(url=session.urls[session.idx])
+        url = session.urls[session.idx]
+        embed.set_image(url=url)
         await inter.response.send_message(embed=embed, ephemeral=False)
+        print(
+            f"✅ User {inter.user.name!r} ({inter.user.id}) confirmed image {session.query!r}: {url}")
         return
 
     # Edit ephemeral message with new image
