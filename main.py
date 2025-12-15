@@ -52,7 +52,7 @@ def build_embed(url: str, query: str, idx: int, total: int) -> disnake.Embed:
 # -------- /pic Command --------
 
 
-@bot.slash_command(name="pic", description="Search for images by query")
+@bot.slash_command(name="pic", description="Search for images by query", install_types=disnake.ApplicationInstallTypes(user=True))
 async def pic(inter: disnake.CommandInteraction, query: str):
     await inter.response.defer(ephemeral=True)
 
