@@ -3,6 +3,7 @@ import disnake
 from disnake.ext import commands
 from serpapi import Client
 from dotenv import load_dotenv
+from dataclasses import dataclass
 
 load_dotenv()
 
@@ -13,23 +14,30 @@ SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 bot = commands.InteractionBot(
     command_sync_flags=commands.CommandSyncFlags.all())
 
+# -------- Dataclass for User Session --------
+
+
+@dataclass
+class ImageSession:
+    query: str
+    urls: list[str]
+    idx: int
+    view: disnake.ui.View
+
+
 # Session store for browsing state
-user_sessions: dict[int, dict] = {}
+user_sessions: dict[int, ImageSession] = {}
 
 # -------- SerpApi Image Search --------
 
 
 async def serpapi_search_images(query: str, num: int = 10) -> list[str]:
-    """
-    Perform a SerpApi Google Images search and return list of image URLs.
-    """
     client = Client(api_key=SERPAPI_KEY)
     results = client.search({
         "engine": "google_images",
         "q": query,
         "num": num
     })
-    # Extract usable URLs
     images = [img.get("original") or img.get("thumbnail")
               for img in results.get("images_results", [])]
     return [img for img in images if img]
@@ -38,9 +46,7 @@ async def serpapi_search_images(query: str, num: int = 10) -> list[str]:
 
 
 def build_embed(url: str, query: str, idx: int, total: int) -> disnake.Embed:
-    emb = disnake.Embed(
-        title=f"Image {idx+1}/{total} for: {query}"
-    )
+    emb = disnake.Embed(title=f"Image {idx+1}/{total} for: {query}")
     emb.set_image(url=url)
     return emb
 
@@ -64,13 +70,9 @@ async def pic(inter: disnake.CommandInteraction, query: str):
     view.add_item(disnake.ui.Button(label="Confirm",
                   style=disnake.ButtonStyle.success, custom_id="confirm"))
 
-    # Save browsing state
-    user_sessions[inter.user.id] = {
-        "urls": urls,
-        "idx": 0,
-        "query": query,
-        "view": view
-    }
+    # Save session using dataclass
+    user_sessions[inter.user.id] = ImageSession(
+        query=query, urls=urls, idx=0, view=view)
 
     embed = build_embed(urls[0], query, 0, len(urls))
     await inter.followup.send(embed=embed, view=view, ephemeral=True)
@@ -85,30 +87,22 @@ async def handle_buttons(inter: disnake.MessageInteraction):
     if not session:
         return await inter.response.send_message("Session expired.", ephemeral=True)
 
-    urls = session["urls"]
-    idx = session["idx"]
-    query = session["query"]
-    view = session["view"]
-
     cid = inter.component.custom_id
 
     if cid == "prev":
-        idx = (idx - 1) % len(urls)
+        session.idx = (session.idx - 1) % len(session.urls)
     elif cid == "next":
-        idx = (idx + 1) % len(urls)
+        session.idx = (session.idx + 1) % len(session.urls)
     elif cid == "confirm":
-        # Confirm posts public embed
-        embed = disnake.Embed(title=f"Image for: {query}")
-        embed.set_image(url=urls[idx])
+        embed = disnake.Embed(title=f"Image for: {session.query}")
+        embed.set_image(url=session.urls[session.idx])
         await inter.response.send_message(embed=embed, ephemeral=False)
         return
 
-    # Update stored index
-    session["idx"] = idx
-
     # Edit ephemeral message with new image
-    new_embed = build_embed(urls[idx], query, idx, len(urls))
-    await inter.response.edit_message(embed=new_embed, view=view)
+    new_embed = build_embed(
+        session.urls[session.idx], session.query, session.idx, len(session.urls))
+    await inter.response.edit_message(embed=new_embed, view=session.view)
 
 
 @bot.event
